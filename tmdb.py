@@ -2,6 +2,7 @@ import requests
 import json 
 from pprint import pprint
 from movie import Movie
+from person import Person
 from random import randint 
 
 
@@ -11,6 +12,18 @@ with open('tmdbapikey.txt', 'r') as file:
 
 url = 'https://api.themoviedb.org/3/'
 
+# C'est l'heure pour une nouvelle astuce @here :)
+# Pour faciliter la gestion des SELECT, INSERT ou UPDATE de vos entité, une bonne pratique est de créer une classe genre "MovieFactory" dont le rôle est de récupérer, ajouter ou mettre à jour vos entités dans votre base. Cela donnerai :
+
+# movie = MovieFactory.findOneByImdbId(imdb_id)
+# movie.synopsis = "blabla mis à jour"
+# MovieFactory.update(movie)
+
+# ou
+
+# movie = Movie(title, original_title, ...)
+# MovieFactory.insert(movie)
+
 
 class Tmdb:
     
@@ -18,12 +31,12 @@ class Tmdb:
     #     self.url = url
   
     def get_film(self,id):
-        page = requests.get(f"{url}movie/{id}?api_key={api_key}")
+        page = requests.get(f"{url}movie/{id}?api_key={api_key}&append_to_response=credits")
         content = page.json()
-
-        # si il y'a status_code dans le .json le film n'est pas trouvé sinon on crée un film 
         
         if 'status_code' not in content : 
+
+            #### Infos générale sur le film 
             title = content['title'].replace("'", " ")
 
             if 'original_title' in content:
@@ -50,7 +63,21 @@ class Tmdb:
 
             movie = Movie(title, original_title, synopsis, duration, production_budget, release_date, vote_average, revenue)
             movie.tmdb_id = tmdb_id
-            return movie
+
+            #### Casting #### 
+            people = []
+            print( "Casting : " + content['title'])
+            casting = content['credits']['cast']
+            for actor in casting:
+                for i in range(0, 11):
+                    if actor['order'] == i:
+                        str_name = actor['name']
+                        str_name_split = str_name.split()
+                        firstname = str_name_split[0]
+                        lastname = str_name_split[1]
+                        person = Person(firstname, lastname)
+                        people.append(person)
+            return movie, people
         return None 
 
 
@@ -75,3 +102,20 @@ class Tmdb:
             if x['iso_3166_1'] == 'FR':
                 rating = x['release_dates'][0]['certification']
                 print(rating)
+
+    def get_casting(self,id):
+        page = requests.get(f"{url}movie/{id}?api_key={api_key}&append_to_response=credits")
+        content = page.json()
+        people = []
+        print( "Casting : " + content['title'])
+        casting = content['credits']['cast']
+        for actor in casting:
+            for i in range(0, 11):
+                if actor['order'] == i:
+                    str_name = actor['name']
+                    str_name_split = str_name.split()
+                    firstname = str_name_split[0]
+                    lastname = str_name_split[1]
+                    person = Person(firstname, lastname)
+                    people.append(person)
+        return people
