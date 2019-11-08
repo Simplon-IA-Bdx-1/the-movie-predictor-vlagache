@@ -4,3 +4,4 @@ class Person:
         self.lastname = lastname
 
         self.id = None
+        self.role = None 

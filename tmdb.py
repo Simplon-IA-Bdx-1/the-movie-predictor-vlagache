@@ -1,34 +1,26 @@
 import requests
-import json 
+import json
+import os
 from pprint import pprint
 from movie import Movie
 from person import Person
 from random import randint 
 
 
-with open('tmdbapikey.txt', 'r') as file:
-    api_key = file.read()
-
-
 url = 'https://api.themoviedb.org/3/'
-
-# C'est l'heure pour une nouvelle astuce @here :)
-# Pour faciliter la gestion des SELECT, INSERT ou UPDATE de vos entité, une bonne pratique est de créer une classe genre "MovieFactory" dont le rôle est de récupérer, ajouter ou mettre à jour vos entités dans votre base. Cela donnerai :
-
-# movie = MovieFactory.findOneByImdbId(imdb_id)
-# movie.synopsis = "blabla mis à jour"
-# MovieFactory.update(movie)
-
-# ou
-
-# movie = Movie(title, original_title, ...)
-# MovieFactory.insert(movie)
-
+api_key = os.environ['TMDB_API_KEY']
 
 class Tmdb:
     
     # def __init__(self, url):
     #     self.url = url
+
+    # fonction générale 
+    # fonction connection à la page 
+    # fonction infos générales sur le film
+    # fonction casting 
+    # fonction crew
+
   
     def get_film(self,id):
         page = requests.get(f"{url}movie/{id}?api_key={api_key}&append_to_response=credits")
@@ -66,7 +58,6 @@ class Tmdb:
 
             #### Casting #### 
             people = []
-            print( "Casting : " + content['title'])
             casting = content['credits']['cast']
             for actor in casting:
                 for i in range(0, 11):
@@ -76,13 +67,51 @@ class Tmdb:
                         firstname = str_name_split[0]
                         lastname = str_name_split[1]
                         person = Person(firstname, lastname)
+                        person.role = 'acteur'
                         people.append(person)
+
+            ###### Crew 
+            crew = content['credits']['crew']
+            for person in crew:
+                if person['job'] == 'Director':
+                        str_name = person['name']
+                        str_name_split = str_name.split()
+                        firstname = str_name_split[0]
+                        lastname = str_name_split[1]
+                        person = Person(firstname, lastname)
+                        person.role = 'realisateur'
+                        people.append(person)
+                elif person['department'] == 'Sound' and person['job'] == 'Original Music Composer':
+                        str_name = person['name']
+                        str_name_split = str_name.split()
+                        firstname = str_name_split[0]
+                        lastname = str_name_split[1]
+                        person = Person(firstname, lastname)
+                        person.role = 'compositeur'
+                        people.append(person)
+
+
+
             return movie, people
         return None 
 
 
     def get_random_films(self,n): # n films randoms
+
+        
+        # movies = []
+        # people = []
+        # i = 1 
+
+        # while i <= int(n):
+        #     index = randint(1,30000)
+        #     movie, people = self.get_film(index)
+        #     if movie != None:
+        #         movie = self
+
+
         movies = []
+        peoples = []
         i = 1
         while i <= int(n):
             index = randint(1,30000)
@@ -102,20 +131,3 @@ class Tmdb:
             if x['iso_3166_1'] == 'FR':
                 rating = x['release_dates'][0]['certification']
                 print(rating)
-
-    def get_casting(self,id):
-        page = requests.get(f"{url}movie/{id}?api_key={api_key}&append_to_response=credits")
-        content = page.json()
-        people = []
-        print( "Casting : " + content['title'])
-        casting = content['credits']['cast']
-        for actor in casting:
-            for i in range(0, 11):
-                if actor['order'] == i:
-                    str_name = actor['name']
-                    str_name_split = str_name.split()
-                    firstname = str_name_split[0]
-                    lastname = str_name_split[1]
-                    person = Person(firstname, lastname)
-                    people.append(person)
-        return people

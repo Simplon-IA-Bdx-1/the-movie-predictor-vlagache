@@ -12,8 +12,10 @@ import argparse
 import csv
 import requests
 import random
+import os
+
+
 from bs4 import BeautifulSoup
-import tmdbsimple as tmdb
 import time 
 from movie import Movie
 from person import Person
@@ -21,8 +23,9 @@ from tmdb import Tmdb
 
 
 def connectToDatabase():
-    return mysql.connector.connect(user='predictor', password='predictor',
-                              host='127.0.0.1',
+    password = os.environ['MYSQL_PASSWORD']
+    return mysql.connector.connect(user='predictor', password=password,
+                              host='database', #127.0.0.1
                               database='predictor')
 
 def disconnectDatabase(cnx):
@@ -34,17 +37,21 @@ def createCursor(cnx):
 def closeCursor(cursor):    
     cursor.close()
 
-def findFilmTmdbQuery(tmbdId):
+def findFilmByTmdbIdQuery(tmbdId):
     return("SELECT * FROM movies where tmdb_id = {}".format(tmbdId))
 
+def findPeopleByFirstnameQuery(firstname,lastname):
+    return("SELECT * FROM people where firstname = '{}' and lastname = '{}'".format(firstname,lastname))
+
+def findIdByRoleQuery(role):
+    # print("SELECT id FROM roles where role = {}".format(role))
+    return("SELECT id FROM roles where name = '{}'".format(role))
+    
 def findQuery(table, id):
     return ("SELECT * FROM {} WHERE id = {} LIMIT 1 ".format(table, id))
 
 def findAllQuery(table):
     return ("SELECT * FROM {}".format(table))
-
-# def insertPeopleQuery(person):
-#     return ("INSERT INTO people (firstname, lastname) VALUES ('{}', '{}')".format(person.firstname, person.lastname))
 
 def insertPeopleQuery(person):
     add_person = ("INSERT INTO people"
@@ -53,12 +60,6 @@ def insertPeopleQuery(person):
 
     data_person = (person.firstname , person.lastname)
     return add_person , data_person
-
-
-
-# def insertMovieQuery(movie):
-#     return ("INSERT INTO movies (title, original_title, synopsis, duration, production_budget, release_date, vote_average, revenue, tmdb_id) VALUES('{}', '{}', '{}', '{}','{}','{}', '{}', '{}', '{}')"
-#     .format(movie.title, movie.original_title, movie.synopsis, movie.duration, movie.production_budget, movie.release_date, movie.vote_average, movie.revenue, movie.tmdb_id))
 
 def insertMovieQuery(movie):
     add_movie = ("INSERT INTO movies "
@@ -69,6 +70,13 @@ def insertMovieQuery(movie):
 
     return add_movie , data_movie
 
+def insertMoviePeopleRoleQuery(movie_id,person_id,role_id):
+    add_moviepeoplerole = ("INSERT INTO movies_people_roles "
+                    "(movies_id, people_id, role_id)"
+                     "VALUES (%s, %s, %s)")
+    data_moviepeoplerole =  (movie_id , person_id , role_id)
+
+    return add_moviepeoplerole, data_moviepeoplerole
 
 
  
@@ -117,15 +125,32 @@ def findAll(table):
         return people
     
 
-def find_by_imdb_id(id_tmdb):
+def find_film_by_imdb_id(id_tmdb):
     cnx = connectToDatabase()
     cursor = createCursor(cnx)
-    cursor.execute(findFilmTmdbQuery(id_tmdb))
+    cursor.execute(findFilmByTmdbIdQuery(id_tmdb))
     results = cursor.fetchall()
     closeCursor(cursor)
     disconnectDatabase(cnx)
     return results
 
+def find_people_by_firstname(firstname,lastname):
+    cnx = connectToDatabase()
+    cursor = createCursor(cnx)
+    cursor.execute(findPeopleByFirstnameQuery(firstname,lastname))
+    results = cursor.fetchall()
+    closeCursor(cursor)
+    disconnectDatabase(cnx)
+    return results
+
+def find_id_by_role(role):
+    cnx = connectToDatabase()
+    cursor = createCursor(cnx)
+    cursor.execute(findIdByRoleQuery(role))
+    results = cursor.fetchall()
+    closeCursor(cursor)
+    disconnectDatabase(cnx)
+    return results[0]['id'] # Retourne l'id lié à un role
 
 def insertPeople(person):
     cnx = connectToDatabase()
@@ -147,6 +172,15 @@ def insertMovie(movie):
     closeCursor(cursor)
     disconnectDatabase(cnx)
 
+def insertMoviePeopleRole(id_movie,id_person,id_role):
+    cnx = connectToDatabase()
+    cursor = createCursor(cnx)
+    add_moviepeoplerole , data_moviepeoplerole = insertMoviePeopleRoleQuery(id_movie,id_person,id_role)
+    cursor.execute(add_moviepeoplerole, data_moviepeoplerole)
+    cnx.commit()
+    closeCursor(cursor)
+    disconnectDatabase(cnx)
+
 
 def printPerson(people):
     print("#{}: {} {}".format(person.id, person.firstname, person.lastname))
@@ -159,8 +193,6 @@ def printMovie(movie):
 parser = argparse.ArgumentParser(description='Process MoviePredictor data')
 parser.add_argument('context', choices=['people', 'movies'], help='Le contexte dans lequel nous allons travailler')
 action_subparser = parser.add_subparsers(title='action', dest='action')
-
-
 
 
 # [movies,people] list 
@@ -181,9 +213,6 @@ know_args = parser.parse_known_args()[0]
 if know_args.api == "themoviedb" : 
     import_parser.add_argument('--random' , help='n films random')
     import_parser.add_argument('--tmdbId' , help='Id du film tmdb')
-    import_parser.add_argument('--cast' , help='casting du film tmdb')
-
-
 
 insert_parser = action_subparser.add_parser('insert', help='Insere une entité dans la database')
 scrap_parser = action_subparser.add_parser('scrap', help='scrap les infos d\'un film sur Wikipedia')
@@ -207,8 +236,6 @@ if know_args.context == "movies":
     # movies scrap URL fiche film Wiki
 
     scrap_parser.add_argument('url', help='url de la page wiki à scraper')
-
-
 
 args = parser.parse_args()
 
@@ -263,14 +290,21 @@ if args.context == "movies":
             print("... Recherche sur TMDB ...")
             if args.tmdbId:
                 tmdb = Tmdb()
-                movie, people = tmdb.get_film(args.tmdbId) # renvoie movie et une liste d'acteur !!! peut renvoyer None 
+                movie, people = tmdb.get_film(args.tmdbId) # renvoie movie et une liste d'acteur !!! peut renvoyer None
                 if movie != None:
                     insertMovie(movie)
                     print(f"Le film {movie.title} à bien été ajouté ! ")
-                    print(f" Movie id : {movie.id}")
+                    i = 0
                     for person in people:
-                        insertPeople(person)
-                        print(f"id dans la base {person.firstname} {person.lastname} : {person.id}")
+                        if not find_people_by_firstname(person.firstname,person.lastname):
+                            insertPeople(person)
+                        role_id = find_id_by_role(person.role)
+                        if person.id == None : 
+                            person_sql = find_people_by_firstname(person.firstname, person.lastname)
+                            person.id = person_sql[0]['id']
+                        insertMoviePeopleRole(movie.id,person.id,role_id)
+                        i += 1 
+                    print(f"avec {i} acteurs")
                 else:
                     print("Le film n'existe pas dans la DB de TMDB")
             if args.random:
@@ -280,7 +314,7 @@ if args.context == "movies":
                 i = 0
                 already_db =  0
                 for movie in movies:
-                    if find_by_imdb_id(movie.tmdb_id):
+                    if find_film_by_imdb_id(movie.tmdb_id):
                         already_db += 1 
                     else :
                         insertMovie(movie)
@@ -288,17 +322,6 @@ if args.context == "movies":
                         i += 1 
                 print(f"ajout films dans la db : {i}")
                 print(f"films deja présent dans la db : {already_db}")
-            if args.cast:
-                    # On doit recuperer l'id du film dont on veut charger le casting 
-                    # comment ? 
-                    # On charge tout les acteurs dans la base 
-                    # Chacun à un ID 
-                    # dans movies_people_role on insere id_movie , id_actor
-                    tmdb = Tmdb()
-                    people = tmdb.get_casting(args.cast)
-                    for person in people:
-                        insertPeople(person)
-                        # print(f"{person.firstname} {person.lastname}")
 
 
 

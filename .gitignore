@@ -208,5 +208,4 @@ $RECYCLE.BIN/
 
 # End of https://www.gitignore.io/api/vim,linux,macos,python,windows,visualstudiocode
 
-# Api Key TMDB
-tmdbapikey.txt
+auth.env
