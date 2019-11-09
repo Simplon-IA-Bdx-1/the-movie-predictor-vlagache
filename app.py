@@ -111,21 +111,34 @@ if args.context == "movies":
                     print(f"avec {i} personnes ( Casting / Equipe )")
                 else:
                     print("Le film n'existe pas dans la DB de TMDB")
-            # if args.random:
-            #     movies = tmdb.get_random_films(args.random)
-            #     print("Ajout a la bse de données")
-            #     i = 0
-            #     already_db =  0
-            #     for movie in movies:
-            #         if find_film_by_imdb_id(movie.tmdb_id):
-            #             already_db += 1 
-            #         else :
-            #             insertMovie(movie)
-            #             print(f"{i} - {movie.title}")
-            #             i += 1 
-            #     print(f"ajout films dans la db : {i}")
-            #     print(f"films deja présent dans la db : {already_db}")
+            if args.year:
+                start = time.time()
+                movies , people_list = tmdb.get_films_by_year(args.year) # Liste de films , et liste de liste de person
+                print("Ajout a la base de données")
+                already_db =  0
+                i = 0
+                film = 0
+                cast = 0
+                for movie in movies: # a chaque nouveau movie , people_list[i]
+                    if moviefactory.find_by_tmdb_id(movie.tmdb_id):
+                        already_db += 1 
+                    else:
+                        moviefactory.insert(movie)
+                        film += 1
+                        for person in people_list[i]: # Liste de person
+                            if not peoplefactory.find_person_by_name(person): 
+                                peoplefactory.insert(person)
+                                cast += 1
+                            role_id = rolefactory.find_id(person.role)
+                            if person.id == None:
+                                person_sql = peoplefactory.find_person_by_name(person)
+                                person.id = person_sql[0]['id']
+                            moviepeoplerolefactory.insert(movie.id,person.id,role_id)       
+                        i += 1 
+                print(f"Films ajoutés : {film}")
+                print(f"Membres du casting ajoutés : {cast}")
+                print(f"Films déja présents dans la DB : {already_db}")
+                end = time.time()
+                time_taken = (end - start)/60
+                print(f"Durée de la requete {time_taken} minute(s)")
 
-
-
-      

@@ -51,7 +51,7 @@ class Parser:
 
             import_parser.add_argument('--file' , help='file.csv')
             import_parser.add_argument('--api' , help='Api utilisé pour importer des films')
-            import_parser.add_argument('--random' , help='n films random')
+            import_parser.add_argument('--year' , help='films de l\'année year avec + de 4000 votes')
             import_parser.add_argument('--tmdbId' , help='Id du film tmdb')
 
         args = parser.parse_args()

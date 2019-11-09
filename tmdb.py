@@ -7,7 +7,7 @@ from person import Person
 from random import randint 
 
 
-url = 'https://api.themoviedb.org/3/'
+url = 'https://api.themoviedb.org/3'
 
 
 class Tmdb:
@@ -17,17 +17,23 @@ class Tmdb:
 
     def get_film(self,id):
 
-        content = self.connect_tmdb_by_id(id) # Json de toutes les infos d'un film par ID 
+        content = self.content_movie_by_id(id) # Json de toutes les infos d'un film par ID 
         movie = self.get_infos(content) # movie = obj movie Or None 
         people = self.get_casting(content) # people = list obj person or None 
 
-        return movie,people
+        return movie, people
 
-    def connect_tmdb_by_id(self,id):
+    def content_movie_by_id(self,id):
         
-        page = requests.get(f"{url}movie/{id}?api_key={self.api_key}&append_to_response=credits")
+        page = requests.get(f"{url}/movie/{id}?api_key={self.api_key}&append_to_response=credits")
         content = page.json()
         return content 
+
+    def content_movie_by_year(self,year):
+
+        page = requests.get(f"{url}/discover/movie?api_key={self.api_key}&year={year}&vote_count.gte=4000")
+        content = page.json()
+        return content
 
     def get_infos(self,content):
 
@@ -73,10 +79,7 @@ class Tmdb:
                 for i in range(0, 11):
                     if actor['order'] == i:
                         str_name = actor['name']
-                        str_name_split = str_name.split()
-                        firstname = str_name_split[0]
-                        lastname = str_name_split[1]
-                        person = Person(firstname, lastname)
+                        person = self.str_to_person(str_name)
                         person.role = 'acteur'
                         people.append(person)
 
@@ -98,46 +101,44 @@ class Tmdb:
 
     def str_to_person(self,str):
         str_split = str.split()
-        firstname = str_split[0]
-        lastname = str_split[1]
+        firstname = str_split[0].replace("'","")
+        if len(str_split) == 1: # Pour remedier au probleme des acteurs sans nom de famille 
+            lastname = "Doe"
+        elif len(str_split) == 3: # 2 Noms de famille ,  Helena Bonham Carter
+             lastname = str_split[1].replace("'","") + " " + str_split[2].replace("'","")
+        else:
+            lastname = str_split[1].replace("'","")
         person = Person(firstname,lastname)
         return person
 
-    
+    def get_films_by_year(self,year):
 
-    # def get_random_films(self,n): # n films randoms
+        # On cherche des films de l'année year avec + de 4000 votes
+        # On recupere le nombre total de pages 
+        nb_page = 1
+        i = 0
+        content = self.content_movie_by_year(year)
+        total_pages = content['total_pages']
+        movies_id = []
+        movies = []
+        people_list = []
 
-        
-    #     # movies = []
-    #     # people = []
-    #     # i = 1 
+        # Boucle sur toutes les pages pour récuperer les id de tout les films correspondant à la recherche 
+        # Id dans la liste movies_id 
+        while nb_page <= total_pages:
+            url_req = f"{url}/discover/movie?api_key={self.api_key}&year={year}&vote_count.gte=4000&page={nb_page}"
+            page = requests.get(url_req)
+            content = page.json()
+            results = content['results']
+            for movie in results:
+                movies_id.append(movie['id'])
+                i += 1
+            nb_page += 1
 
-    #     # while i <= int(n):
-    #     #     index = randint(1,30000)
-    #     #     movie, people = self.get_film(index)
-    #     #     if movie != None:
-    #     #         movie = self
-
-
-    #     movies = []
-    #     peoples = []
-    #     i = 1
-    #     while i <= int(n):
-    #         index = randint(1,30000)
-    #         if self.get_film(index) != None:
-    #             movie = self.get_film(index)
-    #             movies.append(movie)
-    #         else:
-    #             i -= 1
-    #         i += 1
-    #     return movies
-
-
-    # def get_rating(self, id):
-    #     page = requests.get(f"{url}movie/{id}/release_dates?api_key={api_key}")
-    #     content = page.json()  
-    #     for x in content['results'] :
-    #         if x['iso_3166_1'] == 'FR':
-    #             rating = x['release_dates'][0]['certification']
-    #             print(rating)
-
+        # On va chercher les infos pour chaque id de film 
+        for id in movies_id:
+            movie, people = self.get_film(id)
+            movies.append(movie)
+            people_list.append(people)
+         
+        return movies,people_list # Liste de films , Liste de liste de person
