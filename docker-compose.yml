@@ -15,7 +15,7 @@ services:
     environment:
       - MYSQL_RANDOM_ROOT_PASSWORD=yes
       - MYSQL_USER=predictor
-      - MYSQL_PASSWORD=predictor
+      - MYSQL_PASSWORD=
       - MYSQL_DATABASE=predictor
     networks:
       - database_net
