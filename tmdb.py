@@ -16,6 +16,7 @@ class Tmdb:
         self.api_key = api_key
 
     def get_film(self,id):
+        
 
         content = self.content_movie_by_id(id) # Json de toutes les infos d'un film par ID 
         movie = self.get_infos(content) # movie = obj movie Or None 
@@ -31,7 +32,7 @@ class Tmdb:
 
     def content_movie_by_year(self,year):
 
-        page = requests.get(f"{url}/discover/movie?api_key={self.api_key}&year={year}&vote_count.gte=4000")
+        page = requests.get(f"{url}/discover/movie?api_key={self.api_key}&primary_release_year={year}&vote_count.gte=1000")
         content = page.json()
         return content
 
@@ -73,14 +74,14 @@ class Tmdb:
 
         ####### Casting      
         people = []
-        if 'status_code' not in content :
+        if 'status_code' not in content : 
             casting = content['credits']['cast']
             for actor in casting:
                 for i in range(0, 11):
                     if actor['order'] == i:
                         str_name = actor['name']
                         person = self.str_to_person(str_name)
-                        person.role = 'acteur'
+                        person.role = 'actor'
                         people.append(person)
 
             ###### Crew 
@@ -89,25 +90,25 @@ class Tmdb:
                 if person['job'] == 'Director':
                         str_name = person['name']
                         person = self.str_to_person(str_name)
-                        person.role = 'realisateur'
+                        person.role = 'director'
                         people.append(person)
                 elif person['department'] == 'Sound' and person['job'] == 'Original Music Composer':
                         str_name = person['name']
                         person = self.str_to_person(str_name)
-                        person.role = 'compositeur'
+                        person.role = 'composer'
                         people.append(person)
             return people
         return None
 
     def str_to_person(self,str):
         str_split = str.split()
-        firstname = str_split[0].replace("'","")
+        firstname = str_split[0].replace("'", "")
         if len(str_split) == 1: # Pour remedier au probleme des acteurs sans nom de famille 
             lastname = "Doe"
         elif len(str_split) == 3: # 2 Noms de famille ,  Helena Bonham Carter
-             lastname = str_split[1].replace("'","") + " " + str_split[2].replace("'","")
+             lastname = str_split[1].replace("'", "") + " " + str_split[2].replace("'", "")
         else:
-            lastname = str_split[1].replace("'","")
+            lastname = str_split[1].replace("'", "")
         person = Person(firstname,lastname)
         return person
 
@@ -126,7 +127,7 @@ class Tmdb:
         # Boucle sur toutes les pages pour récuperer les id de tout les films correspondant à la recherche 
         # Id dans la liste movies_id 
         while nb_page <= total_pages:
-            url_req = f"{url}/discover/movie?api_key={self.api_key}&year={year}&vote_count.gte=4000&page={nb_page}"
+            url_req = f"{url}/discover/movie?api_key={self.api_key}&primary_release_year={year}&vote_count.gte=1000&page={nb_page}"
             page = requests.get(url_req)
             content = page.json()
             results = content['results']

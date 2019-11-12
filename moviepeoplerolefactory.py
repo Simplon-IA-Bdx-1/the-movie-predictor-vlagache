@@ -1,6 +1,6 @@
-import dbmanager
+import dbfactory
 
-class MoviePeopleRoleFactory(dbmanager.DbManager):
+class MoviePeopleRoleFactory(dbfactory.DbFactory):
 
 
     def insert(self,movie_id,person_id,role_id):

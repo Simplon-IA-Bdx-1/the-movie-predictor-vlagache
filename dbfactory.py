@@ -1,7 +1,7 @@
 import os
 import mysql.connector
 
-class DbManager:
+class DbFactory:
 
     def __init__(self):
         password = os.environ['MYSQL_PASSWORD']

@@ -1,6 +1,6 @@
-import dbmanager
+import dbfactory
 
-class RoleFactory(dbmanager.DbManager):
+class RoleFactory(dbfactory.DbFactory):
 
 
     # pourrait retourner un objet role ? 

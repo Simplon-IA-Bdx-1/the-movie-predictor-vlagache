@@ -1,7 +1,7 @@
-import dbmanager
+import dbfactory
 from movie import Movie
 
-class MovieFactory(dbmanager.DbManager):
+class MovieFactory(dbfactory.DbFactory):
 
     # def __init__(self):
         # connection à la base ? 
@@ -28,9 +28,14 @@ class MovieFactory(dbmanager.DbManager):
         query = ("SELECT * FROM movies where tmdb_id = {}".format(id))
         cursor.execute(query)
         results = cursor.fetchall()
+        movie = None
+        if cursor.rowcount == 1:
+            row = results[0]
+            movie = Movie(row['title'], row['original_title'], row['synopsis'], row['duration'], row['production_budget'], row['release_date'], row['vote_average'], row['revenue'])
+            movie.id = row['id']    
         self.close_cursor()
         self.db_disconnect
-        return results
+        return movie
 
     def find_by_id(self,id):
         # cnx = self.db_connect()
