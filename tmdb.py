@@ -30,9 +30,14 @@ class Tmdb:
         content = page.json()
         return content 
 
-    def content_movie_by_year(self,year):
+    def content_movies_by_year(self,year):
 
         page = requests.get(f"{url}/discover/movie?api_key={self.api_key}&primary_release_year={year}&vote_count.gte=1000")
+        content = page.json()
+        return content
+
+    def content_movies_by_release(self,date,now):
+        page = requests.get(f"https://api.themoviedb.org/3/discover/movie?api_key={self.api_key}&language=en-US&primary_release_date.gte={date}&primary_release_date.lte={now}&with_runtime.gte=60")
         content = page.json()
         return content
 
@@ -118,7 +123,7 @@ class Tmdb:
         # On recupere le nombre total de pages 
         nb_page = 1
         i = 0
-        content = self.content_movie_by_year(year)
+        content = self.content_movies_by_year(year)
         total_pages = content['total_pages']
         movies_id = []
         movies = []
@@ -143,3 +148,36 @@ class Tmdb:
             people_list.append(people)
          
         return movies,people_list # Liste de films , Liste de liste de person
+
+    def get_films_by_release(self,date,now):
+        
+        # On cherche des films de l'année year avec + de 4000 votes
+        # On recupere le nombre total de pages 
+        nb_page = 1
+        i = 0
+        content = self.content_movies_by_release(date,now)
+        total_pages = content['total_pages']
+        movies_id = []
+        movies = []
+        people_list = []
+
+        # Boucle sur toutes les pages pour récuperer les id de tout les films correspondant à la recherche 
+        # Id dans la liste movies_id 
+        while nb_page <= total_pages:
+            url_req = f"https://api.themoviedb.org/3/discover/movie?api_key={self.api_key}&language=en-US&primary_release_date.gte={date}&primary_release_date.lte={now}&with_runtime.gte=60&page={nb_page}"
+            page = requests.get(url_req)
+            content = page.json()
+            results = content['results']
+            for movie in results:
+                movies_id.append(movie['id'])
+                i += 1
+            nb_page += 1
+
+        # On va chercher les infos pour chaque id de film 
+        for id in movies_id:
+            movie, people = self.get_film(id)
+            movies.append(movie)
+            people_list.append(people)
+         
+        return movies,people_list # Liste de films , Liste de liste de person
+

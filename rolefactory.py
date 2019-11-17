@@ -4,8 +4,8 @@ class RoleFactory(dbfactory.DbFactory):
 
 
     # pourrait retourner un objet role ? 
+    
     def find_id(self,role):
-        # cnx = self.db_connect()
         cursor = self.create_cursor()
         query = ("SELECT id FROM roles where name = '{}'".format(role))
         cursor.execute(query)

@@ -94,10 +94,9 @@ if args.context == "movies":
         if args.api == "themoviedb":
             print("... Recherche sur TMDB ...")
             if args.tmdbId:
-                movie, people = tmdb.get_film(args.tmdbId) # renvoie movie et une liste d'acteur !!! peut renvoyer None
-                # Verifier si le film n'y est pas deja
-                if moviefactory.find_by_tmdb_id(movie.tmdb_id) == None: # Le film n'est pas déja présent dans la base
-                    if movie != None:
+                movie, people = tmdb.get_film(args.tmdbId)
+                if movie != None:
+                    if moviefactory.find_by_tmdb_id(movie.tmdb_id) == None: 
                         moviefactory.insert(movie)
                         print(f"Le film {movie.title} à bien été ajouté ! [ id : {movie.id}] ")
                         i = 0
@@ -112,10 +111,9 @@ if args.context == "movies":
                             i += 1 
                         print(f"avec {i} personnes ( Casting / Equipe )")
                     else:
-                        print("Le film n'existe pas dans la DB de TMDB")
+                        print("Le film existe déja dans la DB")
                 else:
-                    print("Le film est déja présent dans la DB")
-                
+                    print("Le film n'existe pas dans la DB de TMDB")     
             if args.year:
                 start = time.time()
                 movies , people_list = tmdb.get_films_by_year(args.year) # Liste de films , et liste de liste de person
@@ -125,12 +123,7 @@ if args.context == "movies":
                 film = 0
                 cast = 0
                 for movie in movies: # a chaque nouveau movie , people_list[i]
-
-                    # 'NoneType' object has no attribute 'tmdb_id'
-
-                    if moviefactory.find_by_tmdb_id(movie.tmdb_id) != None:
-                        already_db += 1 
-                    else:
+                    if moviefactory.find_by_tmdb_id(movie.tmdb_id) == None:
                         moviefactory.insert(movie)
                         film += 1
                         for person in people_list[i]: # Liste de person
@@ -143,6 +136,8 @@ if args.context == "movies":
                                 person.id = person_sql.id
                             moviepeoplerolefactory.insert(movie.id,person.id,role_id)       
                         i += 1 
+                    else:
+                      already_db += 1 
                 print(f"Films ajoutés : {film}")
                 print(f"Membres du casting ajoutés : {cast}")
                 print(f"Films déja présents dans la DB : {already_db}")
